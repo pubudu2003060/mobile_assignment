@@ -143,59 +143,6 @@ export default function Settings() {
         >
           Notifications
         </h2>
-        <div
-          className="card animate-slide-up"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-md)",
-          }}
-        >
-          <div className="flex-between">
-            <div>
-              <p style={{ fontWeight: 500 }}>Local Notifications</p>
-              <p className="text-sm text-muted">
-                Notifications while app is open
-              </p>
-            </div>
-            <span
-              className={`badge ${permission === "granted" ? "badge-completed" : permission === "denied" ? "badge-overdue" : "badge-pending"}`}
-            >
-              {permission}
-            </span>
-          </div>
-
-          {!isSupported && (
-            <p
-              className="text-sm text-danger"
-              style={{ color: "var(--color-danger)" }}
-            >
-              Notifications are not supported in your browser.
-            </p>
-          )}
-
-          {isSupported && permission !== "granted" && (
-            <button
-              className="btn btn-primary btn-block"
-              onClick={handleEnableNotifications}
-            >
-              Enable Notifications
-            </button>
-          )}
-
-          {isSupported && permission === "granted" && (
-            <button
-              className="btn btn-secondary btn-block"
-              onClick={() =>
-                sendNotification("Test", {
-                  body: "This is a test notification",
-                })
-              }
-            >
-              Send Test Notification
-            </button>
-          )}
-        </div>
 
         <div
           className="card animate-slide-up"
