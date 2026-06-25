@@ -14,7 +14,6 @@ export function useLocalStorage(key, initialValue) {
   const setValue = useCallback(
     (value) => {
       try {
-        // Allow value to be a function (same API as useState)
         const valueToStore =
           value instanceof Function ? value(storedValue) : value;
         setStoredValue(valueToStore);
