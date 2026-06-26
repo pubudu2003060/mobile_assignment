@@ -130,7 +130,7 @@ export default function Assignments() {
     if (assignmentData.notify) {
       try {
         const response = await fetch(
-          "http://localhost:3000/api/assignments/schedule-notification",
+          `${import.meta.env.VITE_API_URL}/api/assignments/schedule-notification`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

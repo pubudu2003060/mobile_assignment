@@ -82,7 +82,7 @@ export function useNotification() {
   const savePushSubscription = useCallback(async (subscription) => {
     try {
       const response = await fetch(
-        "http://localhost:3000/api/push-subscription",
+        `${import.meta.env.VITE_API_URL}/api/push-subscription`,
         {
           method: "POST",
           headers: {
@@ -137,7 +137,7 @@ export function useNotification() {
 
       try {
         const response = await fetch(
-          "http://localhost:3000/api/send-notification",
+          `${import.meta.env.VITE_API_URL}/api/send-notification`,
           {
             method: "POST",
             headers: {
