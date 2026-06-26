@@ -81,15 +81,18 @@ export function useNotification() {
 
   const savePushSubscription = useCallback(async (subscription) => {
     try {
-      const response = await fetch("/api/push-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "http://localhost:3000/api/push-subscription",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subscription: subscription.toJSON(),
+          }),
         },
-        body: JSON.stringify({
-          subscription: subscription.toJSON(),
-        }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save subscription");
@@ -133,21 +136,24 @@ export function useNotification() {
       }
 
       try {
-        const response = await fetch("/api/send-notification", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: "⏰ Assignment Due Soon",
-            body: `${assignmentData.title} - Due in ${assignmentData.timeRemaining}`,
-            assignmentId: assignmentData.id,
-            data: {
-              assignmentId: assignmentData.id,
-              deadline: assignmentData.deadline,
+        const response = await fetch(
+          "http://localhost:3000/api/send-notification",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-          }),
-        });
+            body: JSON.stringify({
+              title: "⏰ Assignment Due Soon",
+              body: `${assignmentData.title} - Due in ${assignmentData.timeRemaining}`,
+              assignmentId: assignmentData.id,
+              data: {
+                assignmentId: assignmentData.id,
+                deadline: assignmentData.deadline,
+              },
+            }),
+          },
+        );
 
         if (!response.ok) {
           throw new Error("Failed to send push notification");

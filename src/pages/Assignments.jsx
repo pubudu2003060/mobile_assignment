@@ -33,30 +33,17 @@ export default function Assignments() {
             assignment.deadline,
           );
           if (isDueSoon && !isOverdue) {
+            // SEND LOCAL NOTIFICATION ONLY (tab is open, so this is fine)
             sendNotification("⏰ Assignment Due Soon", {
               body: `${assignment.title} - Due in ${text}`,
             });
-
-            if (isSubscribed) {
-              sendPushNotification({
-                id: assignment.id,
-                title: assignment.title,
-                timeRemaining: text,
-                deadline: assignment.deadline,
-              });
-            }
+            // REMOVE THE sendPushNotification CALL - BACKEND WILL HANDLE IT
           }
         }
       });
     }, 60000);
     return () => clearInterval(interval);
-  }, [
-    assignments,
-    permission,
-    sendNotification,
-    sendPushNotification,
-    isSubscribed,
-  ]);
+  }, [assignments, permission, sendNotification]);
 
   const filteredAssignments = assignments.filter((a) => {
     if (filter === "All") return true;
@@ -107,7 +94,7 @@ export default function Assignments() {
     setIsModalOpen(true);
   };
 
-  const saveAssignment = (e) => {
+  const saveAssignment = async (e) => {
     e.preventDefault();
     const newErrors = {};
     if (!title.trim()) newErrors.title = "Title is required";
@@ -130,12 +117,43 @@ export default function Assignments() {
       createdAt: new Date().toISOString(),
     };
 
+    // Update local state
     if (editingId) {
       setAssignments((prev) =>
         prev.map((a) => (a.id === editingId ? assignmentData : a)),
       );
     } else {
       setAssignments((prev) => [...prev, assignmentData]);
+    }
+
+    // --- NEW: Schedule backend notification if reminder is enabled ---
+    if (assignmentData.notify) {
+      try {
+        const response = await fetch(
+          "http://localhost:3000/api/assignments/schedule-notification",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              assignmentId: assignmentData.id,
+              title: assignmentData.title,
+              deadline: assignmentData.deadline,
+              status: assignmentData.status,
+              notify: assignmentData.notify,
+            }),
+          },
+        );
+        if (!response.ok) {
+          console.warn(
+            "Failed to schedule backend notification:",
+            await response.text(),
+          );
+        } else {
+          console.log("Backend notification scheduled successfully");
+        }
+      } catch (error) {
+        console.warn("Error scheduling backend notification:", error);
+      }
     }
 
     setIsModalOpen(false);
