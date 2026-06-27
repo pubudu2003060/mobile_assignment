@@ -3,7 +3,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const webpush = require("web-push");
 const dotenv = require("dotenv");
-const schedule = require("node-schedule"); // Import node-schedule
+const schedule = require("node-schedule");
 
 dotenv.config();
 
@@ -11,7 +11,6 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// ===== 1. VAPID CONFIGURATION =====
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 const vapidSubject =
@@ -24,14 +23,9 @@ if (!vapidPublicKey || !vapidPrivateKey) {
 
 webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
-// ===== 2. IN-MEMORY STORAGE =====
 const pushSubscriptions = new Map(); // Stores user push endpoints
 const assignmentsStore = new Map(); // Stores assignments with reminder tracking
-// Structure of assignmentsStore:
-// key: assignmentId
-// value: { id, title, deadline, status, notify, remindersSent: [168, 72, ...] }
 
-// ===== 3. HELPER: Send Push to All Subscribers =====
 async function sendPushToAllSubscribers(title, body, tag) {
   if (pushSubscriptions.size === 0) {
     console.log("[PUSH] No subscribers to notify.");
@@ -76,7 +70,6 @@ async function sendPushToAllSubscribers(title, body, tag) {
   failedEndpoints.forEach((id) => pushSubscriptions.delete(id));
 }
 
-// ===== 4. THE RECURRING CHECKER (Runs every 1 minute) =====
 schedule.scheduleJob("* * * * *", async () => {
   const now = new Date();
   console.log(`\n[CRON] Running reminder check at ${now.toLocaleTimeString()}`);
@@ -86,10 +79,9 @@ schedule.scheduleJob("* * * * *", async () => {
     return;
   }
 
-  // Define thresholds: 7d, 3d, 1d, 1h, 5min, 1min (sorted ascending)
   const thresholds = [
-    { hours: 1 / 60, label: "1 minute" }, // 0.0167h
-    { hours: 5 / 60, label: "5 minutes" }, // 0.0833h
+    { hours: 1 / 60, label: "1 minute" },
+    { hours: 5 / 60, label: "5 minutes" },
     { hours: 1, label: "1 hour" },
     { hours: 24, label: "1 day" },
     { hours: 72, label: "3 days" },
@@ -97,7 +89,6 @@ schedule.scheduleJob("* * * * *", async () => {
   ];
 
   for (const [id, assignment] of assignmentsStore.entries()) {
-    // Skip if completed or notifications disabled
     if (assignment.status === "Completed" || !assignment.notify) {
       continue;
     }
@@ -111,15 +102,11 @@ schedule.scheduleJob("* * * * *", async () => {
     const diffMs = deadline - now;
     const diffHours = diffMs / (1000 * 60 * 60);
 
-    // If deadline has already passed, skip reminders
     if (diffHours <= 0) {
       continue;
     }
 
-    // Check thresholds from smallest to largest (most urgent first)
-    // We want to send the *most urgent* reminder that is currently due.
     for (const t of thresholds) {
-      // If we've crossed this threshold AND we haven't sent this specific one yet
       if (diffHours <= t.hours && !assignment.remindersSent.includes(t.hours)) {
         const title = `⏰ Evaluation Reminder: ${assignment.title}`;
         const body = `⚠️ Deadline is in ${t.label}!`;
@@ -130,20 +117,15 @@ schedule.scheduleJob("* * * * *", async () => {
         );
         await sendPushToAllSubscribers(title, body, tag);
 
-        // Mark this threshold as sent to prevent duplicates
         assignment.remindersSent.push(t.hours);
         assignmentsStore.set(id, assignment);
 
-        // Break out of the loop so we only send ONE reminder per minute per assignment
         break;
       }
     }
   }
 });
 
-// ===== 5. API ENDPOINTS =====
-
-// Save/Update push subscription (from frontend)
 app.post("/api/push-subscription", (req, res) => {
   const { subscription } = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -162,7 +144,6 @@ app.post("/api/push-subscription", (req, res) => {
   });
 });
 
-// Unsubscribe from push notifications
 app.post("/api/push-unsubscribe", (req, res) => {
   const { subscription } = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -179,7 +160,6 @@ app.post("/api/push-unsubscribe", (req, res) => {
   });
 });
 
-// Get subscription count (for admin)
 app.get("/api/subscriptions/count", (req, res) => {
   res.json({
     count: pushSubscriptions.size,
@@ -187,7 +167,6 @@ app.get("/api/subscriptions/count", (req, res) => {
   });
 });
 
-// SCHEDULE / UPDATE ASSIGNMENT (Called from frontend)
 app.post("/api/assignments/schedule-notification", (req, res) => {
   const {
     assignmentId,
@@ -203,7 +182,6 @@ app.post("/api/assignments/schedule-notification", (req, res) => {
       .json({ error: "assignmentId and deadline are required" });
   }
 
-  // Store or update the assignment in our Map
   const existing = assignmentsStore.get(assignmentId) || { remindersSent: [] };
   assignmentsStore.set(assignmentId, {
     id: assignmentId,
@@ -211,7 +189,7 @@ app.post("/api/assignments/schedule-notification", (req, res) => {
     deadline: deadline,
     status: status,
     notify: notify,
-    remindersSent: existing.remindersSent || [], // Preserve already sent reminders
+    remindersSent: existing.remindersSent || [],
   });
 
   console.log(
@@ -223,13 +201,11 @@ app.post("/api/assignments/schedule-notification", (req, res) => {
   });
 });
 
-// GET all assignments (optional, for debugging)
 app.get("/api/assignments", (req, res) => {
   const all = Array.from(assignmentsStore.values());
   res.json({ count: all.length, assignments: all });
 });
 
-// ===== 6. ERROR HANDLING =====
 app.use((error, req, res, next) => {
   console.error("Server error:", error);
   res.status(500).json({
@@ -238,7 +214,6 @@ app.use((error, req, res, next) => {
   });
 });
 
-// ===== 7. START SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`
