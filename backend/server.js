@@ -183,13 +183,28 @@ app.post("/api/assignments/schedule-notification", (req, res) => {
   }
 
   const existing = assignmentsStore.get(assignmentId) || { remindersSent: [] };
+  const remindersSent = existing.remindersSent || [];
+
+  const now = new Date();
+  const deadlineDate = new Date(deadline);
+  const diffHours = (deadlineDate - now) / (1000 * 60 * 60);
+
+  const allThresholds = [1 / 60, 5 / 60, 1, 24, 72, 168];
+  if (diffHours > 0) {
+    for (const t of allThresholds) {
+      if (diffHours < t - 2 / 60 && !remindersSent.includes(t)) {
+        remindersSent.push(t);
+      }
+    }
+  }
+
   assignmentsStore.set(assignmentId, {
     id: assignmentId,
     title: title || "Untitled",
     deadline: deadline,
     status: status,
     notify: notify,
-    remindersSent: existing.remindersSent || [],
+    remindersSent: remindersSent,
   });
 
   console.log(
